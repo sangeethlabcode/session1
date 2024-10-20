@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Aug 11 10:28:06 2024
+
+@author: acsan
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+M = 50   # Lattice size (M x M)
+N = 30  # Number of particles
+steps = 10  # Number of steps for the random walk
+trials = 100  # Number of trials to average over
+
+def calculate_energy(i, j, M):
+    return - (i**2 + j**2) / (2 * M**2)
+
+def random_walk_biased(M, N, steps):
+    # Initialize positions of N particles on the lattice
+    positions = np.random.randint(0, M, size=(N, 2))  # N particles with (x, y) positions
+    
+    # Record the initial positions
+    initial_positions = positions.copy()
+    
+    # Arrays to store the displacement, mean square displacement, and total energy at each step
+    displacements = np.zeros((steps, N))  # Track displacement for each particle
+    mean_square_displacement = np.zeros(steps)
+    total_energy = np.zeros(steps)
+    
+    for step in range(steps):
+        for i in range(N):
+            current_pos = positions[i]
+            current_energy = calculate_energy(current_pos[0], current_pos[1], M)
+            
+            # Choose a random direction and calculate the new position
+            direction = np.random.choice(['up', 'down', 'left', 'right'])
+            if direction == 'up':
+                new_pos = [current_pos[0] - 1, current_pos[1]]
+            elif direction == 'down':
+                new_pos = [current_pos[0] + 1, current_pos[1]]
+            elif direction == 'left':
+                new_pos = [current_pos[0], current_pos[1] - 1]
+            elif direction == 'right':
+                new_pos = [current_pos[0], current_pos[1] + 1]
+            
+            # Ensure the new position stays within the lattice boundaries
+            new_pos[0] = np.clip(new_pos[0], 0, M-1)
+            new_pos[1] = np.clip(new_pos[1], 0, M-1)
+            
+            new_energy = calculate_energy(new_pos[0], new_pos[1], M)
+            delta_E = new_energy - current_energy
+            
+            # Move particle with probability P_move = exp(-delta_E)
+            if np.random.rand() < np.exp(-delta_E):
+                positions[i] = new_pos
+            
+        # Calculate displacement from the initial positions for each particle
+        displacements[step] = np.linalg.norm(positions - initial_positions, axis=1)
+        
+        # Compute mean square displacement for this step
+        mean_square_displacement[step] = np.mean(displacements[step]**2)
+        
+        # Calculate total energy of the system
+        total_energy[step] = np.sum([calculate_energy(pos[0], pos[1], M) for pos in positions])
+    
+    return displacements, mean_square_displacement, total_energy
+
+# Perform multiple trials and average the results
+displacements_total = np.zeros((steps, N))
+mean_square_displacement_total = np.zeros(steps)
+total_energy_total = np.zeros(steps)
+
+for _ in range(trials):
+    displacements, mean_square_displacement, total_energy = random_walk_biased(M, N, steps)
+    displacements_total += displacements
+    mean_square_displacement_total += mean_square_displacement
+    total_energy_total += total_energy
+
+displacements_total /= trials
+mean_square_displacement_total /= trials
+total_energy_total /= trials
+
+# Plotting the displacement, mean square displacement, and total energy
+plt.figure(figsize=(18, 5))
+
+# Plot Displacement
+plt.subplot(1, 3, 1)
+for i in range(N):  # Plot the displacement for a few particles
+    plt.plot(np.arange(steps), displacements_total[:, i], label=f'Particle {i+1}')
+plt.xlabel('Number of Steps')
+plt.ylabel('Displacement')
+plt.title('Displacement vs Number of Steps for Particles')
+plt.grid(True)
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=2)  # Move legend outside
+
+# Plot Mean Square Displacement
+plt.subplot(1, 3, 2)
+plt.plot(np.arange(steps), mean_square_displacement_total, label='Mean Square Displacement', color='b')
+plt.xlabel('Number of Steps')
+plt.ylabel('Mean Square Displacement')
+plt.title('Mean Square Displacement vs Number of Steps')
+plt.grid(True)
+plt.legend()
+
+# Plot Total Energy
+plt.subplot(1, 3, 3)
+plt.plot(np.arange(steps), total_energy_total, label='Total Energy', color='r')
+plt.xlabel('Number of Steps')
+plt.ylabel('Total Energy')
+plt.title('Total Energy vs Number of Steps')
+plt.grid(True)
+plt.legend()
+
+plt.tight_layout()
+plt.show()
