@@ -1,0 +1,68 @@
+"""
+Created on Sun Aug 11 10:17:38 2024
+
+@author: acsan
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+M = 10   # Lattice size (M x M)
+N = 5  # Number of particles
+steps = 10  # Number of steps for the random walk
+trials = 100  # Number of trials to average over
+
+def random_walk(M, N, steps):
+    # Initialize the lattice and positions of N particles
+    positions = np.random.randint(0, M, size=(N, 2))  # N particles with (x, y) positions
+    
+    # Record the initial positions
+    initial_positions = positions.copy()
+    
+    # Array to store the mean square displacement at each step
+    mean_square_displacement = np.zeros(steps)
+    
+    for step in range(steps):
+        # For each particle, choose a random direction and move
+        for i in range(N):
+            direction = np.random.choice(['up', 'down', 'left', 'right'])
+            if direction == 'up':
+                positions[i, 0] -= 1
+            elif direction == 'down':
+                positions[i, 0] += 1
+            elif direction == 'left':
+                positions[i, 1] -= 1
+            elif direction == 'right':
+                positions[i, 1] += 1
+            
+            # Ensure the particle stays within the lattice boundaries
+            positions[i, 0] = np.clip(positions[i, 0], 0, M-1)
+            positions[i, 1] = np.clip(positions[i, 1], 0, M-1)
+        
+        # Calculate displacement from the initial positions
+        displacements = np.linalg.norm(positions - initial_positions, axis=1)
+        
+        # Compute mean square displacement for this step
+        mean_square_displacement[step] = np.mean(displacements**2)
+    
+    return mean_square_displacement
+
+# Perform multiple trials and average the mean square displacements
+mean_square_displacement_total = np.zeros(steps)
+
+for _ in range(trials):
+    mean_square_displacement = random_walk(M, N, steps)
+    mean_square_displacement_total += mean_square_displacement
+
+mean_square_displacement_total /= trials
+
+# Plotting the mean square displacement
+plt.figure(figsize=(10, 6))
+plt.plot(np.arange(steps), mean_square_displacement_total, label='Mean Square Displacement')
+plt.xlabel('Number of Steps')
+plt.ylabel('Mean Square Displacement')
+plt.title('Mean Square Displacement vs Number of Steps for N Simultaneous Random Walks')
+plt.grid(True)
+plt.legend()
+plt.show()
